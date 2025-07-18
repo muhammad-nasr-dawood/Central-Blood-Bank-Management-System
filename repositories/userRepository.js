@@ -1,5 +1,7 @@
 const User = require('../models/User');
 
+const Branch = require('../models/Branch');
+
 class UserRepository {
   async create(userData) {
     return User.create(userData);
@@ -18,6 +20,9 @@ class UserRepository {
   }
   async deleteById(id) {
     return User.findByIdAndDelete(id);
+  }
+  async createBranch(branchData) {
+    return Branch.create(branchData);
   }
 }
 

@@ -22,6 +22,12 @@ class DonationRepository {
   async deleteById(id) {
     return Donation.findByIdAndDelete(id);
   }
+  async findAllWithDonor() {
+    return Donation.find().populate('donor', 'name nationalId city');
+  }
+  async findAllWithDonorAndCity() {
+    return Donation.find().populate('donor', 'name nationalId city').populate('city');
+  }
 }
 
 module.exports = new DonationRepository(); 

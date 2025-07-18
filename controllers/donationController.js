@@ -21,6 +21,27 @@ class DonationController {
       next(err);
     }
   }
+
+  async adminUpdateVirusStatus(req, res, next) {
+    try {
+      const { donationId } = req.params;
+      const { virusTestResult } = req.body;
+      const updated = await donationService.updateDonationVirusStatus(donationId, virusTestResult);
+      res.json({ message: 'Virus test result updated', donation: updated });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async adminGetAllDonations(req, res, next) {
+    try {
+      const donationRepository = require('../repositories/donationRepository');
+      const donations = await donationRepository.findAllWithDonor();
+      res.json({ donations });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new DonationController(); 

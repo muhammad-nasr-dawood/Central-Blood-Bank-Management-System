@@ -37,6 +37,29 @@ class UserController {
       next(err);
     }
   }
+
+  async adminAddDonation(req, res, next) {
+    try {
+      const { donorEmail, date, bloodType, virusTestResult, city, expirationDate } = req.body;
+      const userRepository = require('../repositories/userRepository');
+      const donationService = require('../services/donationService');
+      const donor = await userRepository.findByEmail(donorEmail);
+      if (!donor || donor.role !== 'donor') {
+        return res.status(404).json({ message: 'Donor not found' });
+      }
+      const donation = await donationService.createDonation({
+        donorId: donor._id,
+        date,
+        bloodType,
+        virusTestResult: virusTestResult || 'pending',
+        city,
+        expirationDate
+      });
+      res.status(201).json({ message: 'Donation added successfully', donation });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new UserController(); 

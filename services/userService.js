@@ -5,15 +5,21 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 class UserService {
-  async registerDonor({ name, email, password, city, nationalId }) {
+  async registerDonor({ name, email, password, city, latitude, longitude, nationalId }) {
     const existing = await userRepository.findByEmail(email);
     if (existing) throw new Error('Email already exists');
     const hashed = await bcrypt.hash(password, 10);
+    // Find or create city
+    const City = require('../models/City');
+    let cityDoc = await City.findOne({ name: city });
+    if (!cityDoc) {
+      cityDoc = await City.create({ name: city, latitude, longitude });
+    }
     const donor = await userRepository.create({
       name,
       email,
       password: hashed,
-      city,
+      city: cityDoc._id,
       nationalId,
       role: 'donor',
       verified: false,
@@ -33,7 +39,8 @@ class UserService {
         pass: process.env.EMAIL_PASS,
       },
     });
-    const verifyUrl = `${process.env.BASE_URL}/api/auth/verify-email?token=${token}`;
+    // Use verify-email.html for the verification link
+    const verifyUrl = `${process.env.BASE_URL}/verify-email.html?token=${token}`;
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
@@ -71,19 +78,41 @@ class UserService {
     return { token, role: user.role, name: user.name };
   }
 
-  async addHospital({ name, email, password, city }) {
+  async addHospital({ name, email, password, city, latitude, longitude }) {
     const existing = await userRepository.findByEmail(email);
     if (existing) throw new Error('Email already exists');
     const hashed = await bcrypt.hash(password, 10);
+    // Find or create city
+    const City = require('../models/City');
+    let cityDoc = await City.findOne({ name: city });
+    if (!cityDoc) {
+      cityDoc = await City.create({ name: city, latitude, longitude });
+    }
+    // Save hospital with city reference in User collection
     const hospital = await userRepository.create({
       name,
       email,
       password: hashed,
-      city,
+      city: cityDoc._id,
       role: 'hospital',
       verified: true, // Hospitals are trusted, no need for verification
     });
     return hospital;
+  }
+
+  async addBranch({ name, city, latitude, longitude }) {
+    // Find or create city
+    const City = require('../models/City');
+    let cityDoc = await City.findOne({ name: city });
+    if (!cityDoc) {
+      cityDoc = await City.create({ name: city, latitude, longitude });
+    }
+    // Save branch with city reference
+    const branch = await userRepository.createBranch({
+      name,
+      city: cityDoc._id
+    });
+    return branch;
   }
 }
 

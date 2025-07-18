@@ -26,7 +26,10 @@ class HospitalRequestRepository {
     return HospitalRequest.findByIdAndDelete(id);
   }
   async findAll() {
-    return HospitalRequest.find();
+    return HospitalRequest.find().populate({ path: 'hospital', select: 'name' }).populate({ path: 'city', select: 'name' });
+  }
+  async find(query) {
+    return HospitalRequest.find(query);
   }
 }
 
