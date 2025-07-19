@@ -33,7 +33,12 @@ app.use('/api/blood-stock', bloodStockRoutes);
 
 // Placeholder for routes
 app.get('/', (req, res) => {
-  res.send('Central Blood Bank Management System API');
+  res.redirect('/login.html');
+});
+
+// 404 handler - must be before error handler
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, 'frontend', '404.html'));
 });
 
 // Error handler middleware - must be last!

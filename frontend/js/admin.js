@@ -39,11 +39,8 @@ $(function() {
 
   $('#addHospitalForm').on('submit', function(e) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = 'admin-login.html';
-      return;
-    }
+    if (!checkAuthStatus()) return;
+    if (!checkRole('admin')) return;
     const data = {
       name: this.name.value,
       email: this.email.value,
@@ -69,15 +66,11 @@ $(function() {
 
   $('#addDonationForm').on('submit', function(e) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = 'admin-login.html';
-      return;
-    }
+    if (!checkAuthStatus()) return;
+    if (!checkRole('admin')) return;
     const data = {
       donorEmail: this.donorEmail.value,
       bloodType: this.bloodType.value,
-      expirationDate: this.expirationDate.value,
       city: this.city.value,
       virusTestResult: this.virusTestResult.value,
       date: new Date().toISOString().split('T')[0] // today

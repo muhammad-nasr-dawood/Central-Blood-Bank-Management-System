@@ -33,7 +33,7 @@
         <a href="#" id="logout-link" class="nav-link text-danger" style="font-weight: bold;"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </li>
     </ul>
-    <div class="sidebar-footer">&copy; 2024 Blood Bank</div>
+    <div class="sidebar-footer">&copy; 2025 Blood Bank</div>
   </div>
   <div class="main-content">
     <div class="card shadow">
@@ -95,36 +95,21 @@
     </div>
   </div>
   <footer class="text-center mt-5 text-muted">
-    &copy; 2024 Central Blood Bank Management System
+    &copy; 2025 Central Blood Bank Management System
   </footer>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="js/auth-utils.js"></script>
   <script>
-    // Top navbar auth logic
-    function updateNavAuth() {
-      const token = localStorage.getItem('token');
-      if (token) {
-        $('#nav-auth-btn').html('<a class="nav-link" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Logout</a>');
-      } else {
-        $('#nav-auth-btn').html('<a class="nav-link" href="admin-login.html"><i class="bi bi-box-arrow-in-right"></i> Login</a>');
-      }
-    }
-    updateNavAuth();
-    $(document).on('click', '#logoutBtn', function(e) {
-      e.preventDefault();
-      localStorage.removeItem('token');
-      window.location.href = 'admin-login.html';
-    });
     // Route protection: only allow access if logged in and role is admin
     (function() {
-      const token = localStorage.getItem('token');
-      if (!token) window.location.href = 'admin-login.html';
-      // Optionally, decode token and check role here
+      if (!checkAuthStatus()) return;
+      if (!checkRole('admin')) return;
     })();
+    
     // Sidebar logout logic
     $(document).on('click', '#logout-link', function(e) {
       e.preventDefault();
-      localStorage.removeItem('token');
-      window.location.href = 'login.html';
+      forceLogout();
     });
   </script>
   <script src="js/admin-requests.js"></script>

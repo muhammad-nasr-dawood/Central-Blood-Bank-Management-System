@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema({
   nationalId: { type: String, required: function() { return this.role === 'donor'; }, unique: false },
   role: { type: String, enum: ['donor', 'hospital', 'admin'], required: true },
   verified: { type: Boolean, default: false },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema); 

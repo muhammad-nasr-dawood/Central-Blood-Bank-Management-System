@@ -50,7 +50,7 @@
         <a href="#" id="logout-link" class="nav-link text-danger" style="font-weight: bold;"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </li>
     </ul>
-    <div class="sidebar-footer">&copy; 2024 Blood Bank</div>
+    <div class="sidebar-footer">&copy; 2025 Blood Bank</div>
   </div>
   <div class="main-content">
     <div class="card shadow">
@@ -64,10 +64,12 @@
           <div class="mb-3">
             <label for="email" class="form-label">Email address</label>
             <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
+            <div class="invalid-feedback"></div>
           </div>
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
             <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+            <div class="invalid-feedback"></div>
           </div>
           <div class="mb-3">
             <label for="city" class="form-label">City</label>
@@ -83,32 +85,64 @@
     </div>
   </div>
   <footer class="text-center mt-5 text-muted">
-    &copy; 2024 Central Blood Bank Management System
+    &copy; 2025 Central Blood Bank Management System
   </footer>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/auth-utils.js"></script>
   <script>
-    // Top navbar auth logic
-    function updateNavAuth() {
-      const token = localStorage.getItem('token');
-      if (token) {
-        $('#nav-auth-btn').html('<a class="nav-link" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Logout</a>');
-      } else {
-        $('#nav-auth-btn').html('<a class="nav-link" href="admin-login.html"><i class="bi bi-box-arrow-in-right"></i> Login</a>');
-      }
-    }
-    updateNavAuth();
-    $(document).on('click', '#logoutBtn', function(e) {
-      e.preventDefault();
-      localStorage.removeItem('token');
-      window.location.href = 'admin-login.html';
-    });
     // Route protection: only allow access if logged in and role is admin
     (function() {
-      const token = localStorage.getItem('token');
-      if (!token) window.location.href = 'admin-login.html';
-      // Optionally, decode token and check role here
+      if (!checkAuthStatus()) return;
+      if (!checkRole('admin')) return;
     })();
+
+    // Client-side validation with touched logic
+    const touched = { email: false, password: false };
+    function validateHospitalForm(showAll) {
+      let valid = true;
+      
+      // Email validation
+      const email = $('#email').val();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        if (touched.email || showAll) {
+          $('#email').addClass('is-invalid');
+          $('#email').next('.invalid-feedback').text('Invalid email format.');
+        }
+        valid = false;
+      } else {
+        $('#email').removeClass('is-invalid');
+        $('#email').next('.invalid-feedback').text('');
+      }
+      
+      // Password validation
+      const password = $('#password').val();
+      const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':\"\\|,.<>/?]).{8,}$/;
+      if (!passRegex.test(password)) {
+        if (touched.password || showAll) {
+          $('#password').addClass('is-invalid');
+          $('#password').next('.invalid-feedback').text('Password must be at least 8 characters and include upper, lower, number, and special character.');
+        }
+        valid = false;
+      } else {
+        $('#password').removeClass('is-invalid');
+        $('#password').next('.invalid-feedback').text('');
+      }
+      
+      return valid;
+    }
+    
+    $('#email').on('blur', function() { touched.email = true; validateHospitalForm(); });
+    $('#password').on('blur', function() { touched.password = true; validateHospitalForm(); });
+    $('#addHospitalForm input').on('input', function() { validateHospitalForm(); });
+    $('#addHospitalForm').on('submit', function(e) {
+      if (!validateHospitalForm(true)) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
     // Map logic (unchanged)
     var map = L.map('map').setView([26.8206, 30.8025], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

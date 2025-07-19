@@ -40,11 +40,8 @@ $(function() {
 
   $('#requestForm').on('submit', function(e) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = 'hospital-login.html';
-      return;
-    }
+    if (!checkAuthStatus()) return;
+    if (!checkRole('hospital')) return;
     const data = {
       bloodType: this.bloodType.value,
       quantity: this.quantity.value,

@@ -29,10 +29,12 @@
         <div class="mb-3">
           <label for="email" class="form-label">Email address</label>
           <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" autocomplete="email" required>
+          <div class="invalid-feedback"></div>
         </div>
         <div class="mb-3">
           <label for="password" class="form-label">Password</label>
           <input type="password" class="form-control" id="password" name="password" placeholder="Enter a password" autocomplete="new-password" required>
+          <div class="invalid-feedback"></div>
         </div>
         <div class="mb-3">
           <label for="city" class="form-label">City</label>
@@ -44,6 +46,7 @@
         <div class="mb-3">
           <label for="nationalId" class="form-label">National ID</label>
           <input type="text" class="form-control" id="nationalId" name="nationalId" placeholder="Enter your national ID" autocomplete="off" required>
+          <div class="invalid-feedback"></div>
         </div>
         <button type="submit" class="btn btn-danger w-100">Register</button>
     </form>
@@ -54,7 +57,7 @@
     </div>
   </div>
   <footer class="text-center mt-5 text-muted">
-    &copy; 2024 Central Blood Bank Management System
+    &copy; 2025 Central Blood Bank Management System
   </footer>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -86,6 +89,62 @@
     map.on('click', function(e) {
       marker.setLatLng(e.latlng);
       updateCity(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Client-side validation with touched logic
+    const touched = { email: false, password: false, nationalId: false };
+    function validateRegisterForm(showAll) {
+      let valid = true;
+      // Email
+      const email = $('#email').val();
+      const emailRegex = /^[^\s@]+@[^ 0-9]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        if (touched.email || showAll) {
+          $('#email').addClass('is-invalid');
+          $('#email').next('.invalid-feedback').text('Invalid email format.');
+        }
+        valid = false;
+      } else {
+        $('#email').removeClass('is-invalid');
+        $('#email').next('.invalid-feedback').text('');
+      }
+      // Password
+      const password = $('#password').val();
+      const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':\"\\|,.<>/?]).{8,}$/;
+      if (!passRegex.test(password)) {
+        if (touched.password || showAll) {
+          $('#password').addClass('is-invalid');
+          $('#password').next('.invalid-feedback').text('Password must be at least 8 characters and include upper, lower, number, and special character.');
+        }
+        valid = false;
+      } else {
+        $('#password').removeClass('is-invalid');
+        $('#password').next('.invalid-feedback').text('');
+      }
+      // National ID
+      const nationalId = $('#nationalId').val();
+      const natIdRegex = /^(2|3)\d{13}$/;
+      if (!natIdRegex.test(nationalId)) {
+        if (touched.nationalId || showAll) {
+          $('#nationalId').addClass('is-invalid');
+          $('#nationalId').next('.invalid-feedback').text('National ID must start with 2 or 3 and be 14 digits.');
+        }
+        valid = false;
+      } else {
+        $('#nationalId').removeClass('is-invalid');
+        $('#nationalId').next('.invalid-feedback').text('');
+      }
+      return valid;
+    }
+    $('#email').on('blur', function() { touched.email = true; validateRegisterForm(); });
+    $('#password').on('blur', function() { touched.password = true; validateRegisterForm(); });
+    $('#nationalId').on('blur', function() { touched.nationalId = true; validateRegisterForm(); });
+    $('#registerForm input').on('input', function() { validateRegisterForm(); });
+    $('#registerForm').on('submit', function(e) {
+      if (!validateRegisterForm(true)) {
+        e.preventDefault();
+        return false;
+      }
     });
   </script>
   <script src="js/donor.js"></script>

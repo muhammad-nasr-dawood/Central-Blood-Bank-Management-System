@@ -66,11 +66,8 @@ $(function() {
 
   $('#donateForm').on('submit', function(e) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = 'donor-login.html';
-      return;
-    }
+    if (!checkAuthStatus()) return;
+    if (!checkRole('donor')) return;
     const data = {
       bloodType: this.bloodType.value,
       virusTestResult: this.virusTestResult.value,
