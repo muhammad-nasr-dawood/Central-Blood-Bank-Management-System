@@ -82,7 +82,8 @@ class DonationService {
   }
 
   async getDonationsByDonor(donorId) {
-    return donationRepository.findByDonor(donorId);
+    const Donation = require('../models/Donation');
+    return Donation.find({ donor: donorId }).populate('city');
   }
 
   async getAllDonations() {

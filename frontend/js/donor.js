@@ -1,3 +1,16 @@
+// Print role from token at page load
+(function() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('[donor.js] Role from token:', payload.role);
+    } catch (e) {
+      console.log('[donor.js] Could not parse token');
+    }
+  }
+})();
+
 $(function() {
   $('#registerForm').on('submit', function(e) {
     e.preventDefault();
@@ -37,6 +50,7 @@ $(function() {
       data: JSON.stringify(data),
       success: function(res) {
         localStorage.setItem('token', res.token);
+        console.log('[donor.js] Role from login response:', res.role);
         $('#loginMsg').html('<div class="alert alert-success">Login successful! Redirecting...</div>');
         let redirectUrl = 'donor-donate.html';
         if (res.role === 'admin') redirectUrl = 'admin-add-hospital.html';
@@ -78,37 +92,4 @@ $(function() {
       }
     });
   });
-
-  if (window.location.pathname.endsWith('donor-my-donations.html')) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = 'donor-login.html';
-    } else {
-      $.ajax({
-        url: '/api/donation/my',
-        method: 'GET',
-        headers: { 'Authorization': 'Bearer ' + token },
-        success: function(res) {
-          if (res.donations && res.donations.length > 0) {
-            res.donations.forEach(function(d) {
-              $('#donationsTable tbody').append(
-                `<tr>
-                  <td>${d.date ? d.date.split('T')[0] : ''}</td>
-                  <td>${d.bloodType}</td>
-                  <td>${d.virusTestResult}</td>
-                  <td>${d.city}</td>
-                  <td>${d.expirationDate ? d.expirationDate.split('T')[0] : ''}</td>
-                </tr>`
-              );
-            });
-          } else {
-            $('#donationsMsg').html('<div class="alert alert-info">No donations found.</div>');
-          }
-        },
-        error: function(xhr) {
-          $('#donationsMsg').html('<div class="alert alert-danger">' + (xhr.responseJSON?.message || 'Failed to load donations') + '</div>');
-        }
-      });
-    }
-  }
 }); 

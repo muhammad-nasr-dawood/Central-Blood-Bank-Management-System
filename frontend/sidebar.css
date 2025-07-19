@@ -1,0 +1,86 @@
+/* Sidebar styles for all roles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 220px;
+  background: #fff;
+  border-right: 1px solid #eee;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+  z-index: 1040;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s;
+}
+.sidebar .sidebar-header {
+  padding: 1.5rem 1rem 1rem 1.5rem;
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #d32f2f;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sidebar .nav {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1.5rem;
+  color: #333;
+  text-decoration: none;
+  font-size: 1.08rem;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sidebar .nav-link.active, .sidebar .nav-link:hover {
+  background: #fbe9e7;
+  color: #d32f2f;
+  border-left: 3px solid #d32f2f;
+}
+.sidebar .nav-link .bi {
+  margin-right: 0.9rem;
+  font-size: 1.2rem;
+}
+.sidebar .sidebar-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #eee;
+  font-size: 0.98rem;
+  color: #888;
+}
+@media (max-width: 991px) {
+  .sidebar {
+    width: 60px;
+  }
+  .sidebar .sidebar-header, .sidebar .sidebar-footer {
+    display: none;
+  }
+  .sidebar .nav-link {
+    justify-content: center;
+    padding: 0.85rem 0.5rem;
+  }
+  .sidebar .nav-link span {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .sidebar {
+    position: absolute;
+    left: -220px;
+    width: 220px;
+    transition: left 0.2s;
+  }
+  .sidebar.open {
+    left: 0;
+  }
+  body.sidebar-open {
+    overflow: hidden;
+  }
+} 

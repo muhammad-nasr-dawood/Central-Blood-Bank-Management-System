@@ -1,3 +1,16 @@
+// Print role from token at page load
+(function() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('[hospital.js] Role from token:', payload.role);
+    } catch (e) {
+      console.log('[hospital.js] Could not parse token');
+    }
+  }
+})();
+
 $(function() {
   $('#loginForm').on('submit', function(e) {
     e.preventDefault();
@@ -12,6 +25,7 @@ $(function() {
       data: JSON.stringify(data),
       success: function(res) {
         localStorage.setItem('token', res.token);
+        console.log('[hospital.js] Role from login response:', res.role);
         $('#loginMsg').html('<div class="alert alert-success">Login successful! Redirecting...</div>');
         let redirectUrl = 'hospital-request.html';
         if (res.role === 'donor') redirectUrl = 'donor-donate.html';
@@ -51,37 +65,4 @@ $(function() {
       }
     });
   });
-
-  if (window.location.pathname.endsWith('hospital-my-requests.html')) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = 'hospital-login.html';
-    } else {
-      $.ajax({
-        url: '/api/hospital-request/my',
-        method: 'GET',
-        headers: { 'Authorization': 'Bearer ' + token },
-        success: function(res) {
-          if (res.requests && res.requests.length > 0) {
-            res.requests.forEach(function(r) {
-              $('#requestsTable tbody').append(
-                `<tr>
-                  <td>${r.bloodType}</td>
-                  <td>${r.quantity}</td>
-                  <td>${r.patientStatus}</td>
-                  <td>${r.city}</td>
-                  <td>${r.fulfilled ? 'Yes' : 'No'}</td>
-                </tr>`
-              );
-            });
-          } else {
-            $('#requestsMsg').html('<div class="alert alert-info">No requests found.</div>');
-          }
-        },
-        error: function(xhr) {
-          $('#requestsMsg').html('<div class="alert alert-danger">' + (xhr.responseJSON?.message || 'Failed to load requests') + '</div>');
-        }
-      });
-    }
-  }
 }); 

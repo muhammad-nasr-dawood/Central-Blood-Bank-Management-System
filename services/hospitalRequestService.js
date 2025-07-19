@@ -113,7 +113,8 @@ class HospitalRequestService {
     return hospitalRequestRepository.findAll();
   }
   async getRequestsByHospital(hospitalId) {
-    return hospitalRequestRepository.findByHospital(hospitalId);
+    const HospitalRequest = require('../models/HospitalRequest');
+    return HospitalRequest.find({ hospital: hospitalId }).populate('city');
   }
 }
 

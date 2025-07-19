@@ -1,3 +1,15 @@
+// Print role from token at page load
+(function() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('[admin.js] Role from token:', payload.role);
+    } catch (e) {
+      console.log('[admin.js] Could not parse token');
+    }
+  }
+})();
 $(function() {
   $('#loginForm').on('submit', function(e) {
     e.preventDefault();
@@ -12,6 +24,7 @@ $(function() {
       data: JSON.stringify(data),
       success: function(res) {
         localStorage.setItem('token', res.token);
+        console.log('[admin.js] Role from login response:', res.role);
         $('#loginMsg').html('<div class="alert alert-success">Login successful! Redirecting...</div>');
         let redirectUrl = 'admin-add-hospital.html';
         if (res.role === 'donor') redirectUrl = 'donor-donate.html';
