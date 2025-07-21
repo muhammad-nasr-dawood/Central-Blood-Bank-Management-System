@@ -145,16 +145,20 @@ class HospitalRequestService {
     return parentA.slice(0, point).concat(parentB.slice(point));
   }
 
-  _mutate(chromosome, stockList) {
+  _mutate(chromosome, stockList, requests) {
     // Randomly reassign one gene (request) to a valid stock or -1
     const idx = Math.floor(Math.random() * chromosome.length);
-    // For mutation, we need the request index, but requests are not passed here.
-    // We'll mutate to -1 or a random valid stock index (from all stocks)
-    // For simplicity, just randomly assign to -1 or any stock
-    if (Math.random() < 0.2) {
+    const req = requests[idx];
+    // Find all valid stocks for this request
+    const validStocks = stockList
+      .map((s, sIdx) => ({ s, sIdx }))
+      .filter(({ s }) => s.bloodType === req.bloodType && s.quantity >= req.quantity);
+    // 20% chance to mutate to -1 (unfulfilled), otherwise pick a valid stock if available
+    if (validStocks.length === 0 || Math.random() < 0.2) {
       chromosome[idx] = -1;
     } else {
-      chromosome[idx] = Math.floor(Math.random() * stockList.length);
+      const pick = validStocks[Math.floor(Math.random() * validStocks.length)];
+      chromosome[idx] = pick.sIdx;
     }
     return chromosome;
   }
@@ -197,7 +201,7 @@ class HospitalRequestService {
         let child = this._crossover(parentA, parentB); // this is the new chromosome (child) created by combining the two parents
         // e. Mutation
         if (Math.random() < MUTATION_RATE) {
-          child = this._mutate(child, stockList); 
+          child = this._mutate(child, stockList, requests); 
         }
         newPopulation.push(child);
       }
@@ -211,7 +215,7 @@ class HospitalRequestService {
 
     // 4. Apply assignments (update DB)
     // We'll use a local copy of stock quantities to avoid over-withdrawal
-    const localStock = stockList.map(s => ({ ...s, quantity: s.quantity, bloodType: s.bloodType }));
+    const localStock = stockList.map(s => ({ ...s, quantity: s.quantity, bloodType: s.bloodType, city: s.city, _id: s._id }));
     console.log('[HospitalRequestService] Best chromosome:', bestChromosome);
     for (let i = 0; i < bestChromosome.length; i++) {
       const stockIdx = bestChromosome[i];
@@ -223,7 +227,12 @@ class HospitalRequestService {
       }
       const stock = localStock[stockIdx];
       // Check if enough stock remains
-      console.log(`[HospitalRequestService] Fulfilling request ${req.quantity} of type ${req.bloodType}, with stock ${stock.quantity} of type ${stock.bloodType}`);
+      
+      const reqCity = cityMap[String(req.city)];
+      const stockCity = cityMap[String(stock.city)];
+      console.log(`[HospitalRequestService] Fulfilling request of quantity ${req.quantity} of type ${req.bloodType} of city ${reqCity ? reqCity.name : req.city}, with stock of quantity ${stock.quantity} of type ${stock.bloodType} of city ${stockCity ? stockCity.name : stock.city}, stockId ${stock._id}`);
+
+
       if (stock.bloodType === req.bloodType && stock.quantity >= req.quantity) {
         // Withdraw from stock
         stock.quantity -= req.quantity;
