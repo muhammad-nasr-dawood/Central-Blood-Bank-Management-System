@@ -40,6 +40,7 @@ $(function() {
 
   $('#requestForm').on('submit', function(e) {
     e.preventDefault();
+    const token = localStorage.getItem('token');
     if (!checkAuthStatus()) return;
     if (!checkRole('hospital')) return;
     const data = {
@@ -55,7 +56,7 @@ $(function() {
       headers: { 'Authorization': 'Bearer ' + token },
       data: JSON.stringify(data),
       success: function(res) {
-        $('#requestMsg').html('<div class="alert alert-success">Request submitted! ' + (res.message || '') + '</div>');
+        $('#requestMsg').html('<div class="alert alert-success">Request submitted! '  + '</div>');
       },
       error: function(xhr) {
         $('#requestMsg').html('<div class="alert alert-danger">' + (xhr.responseJSON?.message || 'Request failed') + '</div>');

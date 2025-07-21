@@ -60,45 +60,177 @@ class HospitalRequestService {
     return request;
   }
 
-  // Batch processing: fulfill as many requests as possible, prioritizing by urgency and city distance
+  // --- Genetic Algorithm Helpers ---
+  // Chromosome: Array of assignments (stock index or -1 for unfulfilled)
+  _encodeChromosome(requests, stockList) {
+    // For each request, randomly assign a valid stock index or -1 (unfulfilled)
+    const chromosome = [];
+    for (let i = 0; i < requests.length; i++) {
+      const req = requests[i];
+      // Find all stocks that match blood type and have enough quantity
+      const validStocks = stockList
+        .map((s, idx) => ({ s, idx }))
+        .filter(({ s }) => s.bloodType === req.bloodType && s.quantity >= req.quantity);
+      if (validStocks.length === 0) {
+        chromosome.push(-1); // unfulfilled
+      } else {
+        // Randomly pick a valid stock or leave unfulfilled (small chance)
+        if (Math.random() < 0.1) {
+          chromosome.push(-1);
+        } else {
+          const pick = validStocks[Math.floor(Math.random() * validStocks.length)];
+          chromosome.push(pick.idx);
+        }
+      }
+    }
+    return chromosome;
+  }
+
+  _fitness(chromosome, requests, stockList, cityMap, statusPriority) {
+    // Fitness: higher for more fulfilled, urgent, and closer requests
+    let score = 0;
+    // Track stock usage to avoid over-assigning
+    const stockUsage = Array(stockList.length).fill(0);
+    for (let i = 0; i < chromosome.length; i++) {
+      const stockIdx = chromosome[i];
+      const req = requests[i];
+      if (stockIdx === -1) {
+        // Penalize unfulfilled, more for urgent
+        score -= 10 * (4 - statusPriority[req.patientStatus]);
+        continue;
+      }
+      const stock = stockList[stockIdx];
+      // Check if stock is valid
+      if (stock.bloodType !== req.bloodType) {
+        score -= 20; // heavy penalty for invalid assignment
+        continue;
+      }
+      stockUsage[stockIdx] += req.quantity;
+      // Reward fulfillment, more for urgent
+      score += 20 * (4 - statusPriority[req.patientStatus]);
+      // Penalize distance
+      const dist = cityDistance(cityMap[String(req.city)], cityMap[String(stock.city)]);
+      score -= dist;
+    }
+    // Penalize over-used stocks
+    for (let i = 0; i < stockList.length; i++) {
+      if (stockUsage[i] > stockList[i].quantity) {
+        score -= 50 * (stockUsage[i] - stockList[i].quantity);
+      }
+    }
+    return score;
+  }
+
+  _selectParents(population, fitnesses) {
+    // Tournament selection: pick 3 random, return best two
+    function pickOne() {
+      const idxs = [];
+      while (idxs.length < 3) {
+        const idx = Math.floor(Math.random() * population.length);
+        if (!idxs.includes(idx)) idxs.push(idx);
+      }
+      let bestIdx = idxs[0];
+      for (const idx of idxs) {
+        if (fitnesses[idx] > fitnesses[bestIdx]) bestIdx = idx;
+      }
+      return population[bestIdx];
+    }
+    return [pickOne(), pickOne()]; // returns the best two chromosomes from the population to be used as parents for the next generation
+  }
+
+  _crossover(parentA, parentB) {
+    // Single-point crossover
+    const len = parentA.length;
+    const point = Math.floor(Math.random() * len);
+    return parentA.slice(0, point).concat(parentB.slice(point));
+  }
+
+  _mutate(chromosome, stockList) {
+    // Randomly reassign one gene (request) to a valid stock or -1
+    const idx = Math.floor(Math.random() * chromosome.length);
+    // For mutation, we need the request index, but requests are not passed here.
+    // We'll mutate to -1 or a random valid stock index (from all stocks)
+    // For simplicity, just randomly assign to -1 or any stock
+    if (Math.random() < 0.2) {
+      chromosome[idx] = -1;
+    } else {
+      chromosome[idx] = Math.floor(Math.random() * stockList.length);
+    }
+    return chromosome;
+  }
+
+  // --- Genetic Algorithm Batch Processing ---
   async processBatchRequests(requests) {
-    // Prioritize by urgency (Immediate > Urgent > Normal)
+    // Prepare data
+    console.log('[HospitalRequestService] Processing batch requests:', requests.length);
     const statusPriority = { 'Immediate': 1, 'Urgent': 2, 'Normal': 3 };
-    requests.sort((a, b) => statusPriority[a.patientStatus] - statusPriority[b.patientStatus]);
-    // Get all current blood stock
     const stockList = await bloodStockRepository.findAll();
-    // Preload all cities for fast lookup
     const allCityIds = new Set();
     requests.forEach(r => allCityIds.add(String(r.city)));
     stockList.forEach(s => allCityIds.add(String(s.city)));
     const cityDocs = await City.find({ _id: { $in: Array.from(allCityIds) } });
     const cityMap = {};
     cityDocs.forEach(c => { cityMap[String(c._id)] = c; });
-    for (const req of requests) {
-      // Try to find stock in same city first
-      let stock = stockList.find(s => s.bloodType === req.bloodType && String(s.city) === String(req.city) && s.quantity >= req.quantity);
-      let usedCity = req.city;
-      // If not enough, find closest city with enough stock
-      if (!stock) {
-        let minDist = Infinity;
-        for (const s of stockList) {
-          if (s.bloodType === req.bloodType && s.quantity >= req.quantity) {
-            const dist = cityDistance(cityMap[String(req.city)], cityMap[String(s.city)]);
-            if (dist < minDist) {
-              minDist = dist;
-              stock = s;
-              usedCity = s.city;
-            }
-          }
+
+    // Genetic Algorithm parameters
+    const POP_SIZE = 30;
+    const GENERATIONS = 40;
+    const MUTATION_RATE = 0.1;
+
+    // 1. Initialize population
+    let population = []; // so the population here has a list of chromosomes, each chromosome is an array of stock indices (or -1 for unfulfilled) and each index in the chromosome represents a request that is being fulfilled by that stock index
+    for (let i = 0; i < POP_SIZE; i++) {
+      population.push(this._encodeChromosome(requests, stockList)); // after encoding the requests to chromosomes each request represtent an index in the chromosome (which is in the end an index in the stocklist)  it could be -1 for unfulfilled or couldn't pick a stock
+    }
+
+    // 2. Evolution loop
+    for (let gen = 0; gen < GENERATIONS; gen++) {
+      // a. Evaluate fitness
+      const fitnesses = population.map(chrom => this._fitness(chrom, requests, stockList, cityMap, statusPriority)); // it returns an array of fitness scores for each chromosome(request)
+
+      // b. Create new population
+      let newPopulation = [];
+      while (newPopulation.length < POP_SIZE) {
+        // c. Select parents
+        const [parentA, parentB] = this._selectParents(population, fitnesses); // select best two chromosomes from the population to be used as parents for the next generation
+        // d. Crossover
+        let child = this._crossover(parentA, parentB); // this is the new chromosome (child) created by combining the two parents
+        // e. Mutation
+        if (Math.random() < MUTATION_RATE) {
+          child = this._mutate(child, stockList); 
         }
+        newPopulation.push(child);
       }
-      if (stock && stock.quantity >= req.quantity) {
+      population = newPopulation;
+    }
+
+    // 3. Pick best chromosome from the last generation
+    const fitnesses = population.map(chrom => this._fitness(chrom, requests, stockList, cityMap, statusPriority));
+    const bestIdx = fitnesses.indexOf(Math.max(...fitnesses));
+    const bestChromosome = population[bestIdx];
+
+    // 4. Apply assignments (update DB)
+    // We'll use a local copy of stock quantities to avoid over-withdrawal
+    const localStock = stockList.map(s => ({ ...s, quantity: s.quantity, bloodType: s.bloodType }));
+    console.log('[HospitalRequestService] Best chromosome:', bestChromosome);
+    for (let i = 0; i < bestChromosome.length; i++) {
+      const stockIdx = bestChromosome[i];
+      const req = requests[i];
+      if (stockIdx === -1) {
+        // Mark as unfulfilled
+        await hospitalRequestRepository.updateById(req._id, { fulfilled: false });
+        continue;
+      }
+      const stock = localStock[stockIdx];
+      // Check if enough stock remains
+      console.log(`[HospitalRequestService] Fulfilling request ${req.quantity} of type ${req.bloodType}, with stock ${stock.quantity} of type ${stock.bloodType}`);
+      if (stock.bloodType === req.bloodType && stock.quantity >= req.quantity) {
         // Withdraw from stock
-        await bloodStockRepository.updateById(stock._id, { quantity: stock.quantity - req.quantity });
-        // Mark request as fulfilled
+        stock.quantity -= req.quantity;
+        await bloodStockRepository.updateById(stock._id, { quantity: stock.quantity });
         await hospitalRequestRepository.updateById(req._id, { fulfilled: true });
       } else {
-        // Not fulfilled
+        // Not enough stock or invalid, mark as unfulfilled
         await hospitalRequestRepository.updateById(req._id, { fulfilled: false });
       }
     }

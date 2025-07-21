@@ -39,6 +39,7 @@ $(function() {
 
   $('#addHospitalForm').on('submit', function(e) {
     e.preventDefault();
+    const token = localStorage.getItem('token');
     if (!checkAuthStatus()) return;
     if (!checkRole('admin')) return;
     const data = {
@@ -66,6 +67,7 @@ $(function() {
 
   $('#addDonationForm').on('submit', function(e) {
     e.preventDefault();
+    const token = localStorage.getItem('token');
     if (!checkAuthStatus()) return;
     if (!checkRole('admin')) return;
     const data = {
